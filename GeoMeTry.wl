@@ -22,6 +22,18 @@ Symbol \!\(\*SuperscriptBox[SubscriptBox[\(\[CapitalGamma]\), \(\[Mu]\[Nu]\)], \
 If[Not@ValueQ[ChristoffelTable::usage], ChristoffelTable::usage =
 "ChristoffelTable[g, {\!\(\*SubscriptBox[\(x\), \(1\)]\), \!\(\*SubscriptBox[\(x\), \(2\)]\), ...}]"];
 
+If[Not@ValueQ[RiemannTensor::usage], RiemannTensor::usage =
+"RiemannTensor[conn, coor]"];
+
+If[Not@ValueQ[RicciTensor::usage], RicciTensor::usage =
+"RicciTensor[riemann_tensor]"];
+
+If[Not@ValueQ[RicciScalar::usage], RicciScalar::usage =
+"RicciScalar[ricci_tensor]"];
+
+If[Not@ValueQ[GmtShow::usage], GmtShow::usage =
+"GmtShow[tensor]"];
+
 
 If[Not@ValueQ[BackgroundMetric::usage], BackgroundMetric::usage =
 "BackgroundMetric is an option for metric related functions to configure \
@@ -42,7 +54,7 @@ which direction the transformation going. Its value represents the given \
 symbolic variables should be treated as parameters whether before the \
 transformation or not."];
 
-Gmt::opts = "`1`";
+GeoMeTry::opts = "`1`";
 
 
 Begin["`Private`"];
@@ -58,8 +70,9 @@ GmtGetMetric=Switch[#2,
 	Euclidean,IdentityMatrix[#1],
 	MinkowskiPlus,MinkowskiMetric[#1,+1],
 	MinkowskiMinus,MinkowskiMetric[#1],
-	MinkowskiMetric,Message[Gmt::opts,"'MinkowskiMetric' is a function name, you may use 'MinkowskiMinus' or 'MinkowskiPlus' instead."],
+	MinkowskiMetric,Message[GeoMeTry::opts,"'MinkowskiMetric' is a function name, you may use 'MinkowskiMinus' or 'MinkowskiPlus' instead."],
 	_,#2]&;
+RankCheck[rank_Integer]:=Function[{tensor},Equal@@Dimensions@tensor&&ArrayDepth[tensor]==rank];
 
 
 JacobiMatrix=Simplify[Table[D[o,i],{o,#1},{i,#2}]]&;
@@ -82,8 +95,26 @@ ChristoffelSymbol[trans_,coor_,u_,m_,n_,OptionsPattern[GmtTransformOptions]]/;Al
 	ChristoffelSymbol[Metric[trans,coor],coor,u,m,n];
 
 
-ChristoffelTable[trans_,coor_,opts__:{}]:=
-	Table[ChristoffelSymbol@@{trans,coor,u,m,n}~Join~Flatten[{opts}],{u,Length[coor]},{m,Length[coor]},{n,Length[coor]}];
+ChristoffelTable[trans_,coor_,opts__:{}]:=Simplify[
+	Table[ChristoffelSymbol@@{trans,coor,u,m,n}~Join~Flatten[{opts}],{u,Length[coor]},{m,Length[coor]},{n,Length[coor]}]];
+
+
+RiemannTensor[conn_?(RankCheck[3]),coor_]/;Length[conn]==Length[coor]:=Simplify[Table[
+	D[conn[[r,n,s]],coor[[m]]]-D[conn[[r,m,s]],coor[[n]]]
+		+Sum[conn[[r,m,l]]conn[[l,n,s]]-conn[[r,n,l]]conn[[l,m,s]],{l,Length[coor]}],
+	{r,Length[coor]},{s,Length[coor]},{m,Length[coor]},{n,Length[coor]}]];
+
+
+RicciTensor[rt_?(RankCheck[4])]:=Simplify[Sum[rt[[i,All,i,All]],{i,Length[rt]}]];
+
+
+RicciScalar[rt_?(RankCheck[2])]:=Simplify[Tr[rt]];
+
+
+(* Convenient Functions *)
+GmtShow[tensor_?(RankCheck[3])]:=TableForm[Map[MatrixForm,tensor],TableHeadings->{Array[
+\!\(\*OverscriptBox[\*"\"\<\!\(\*SubscriptBox[\(\[CapitalGamma]\), \(\[Alpha]\[Beta]\)]\)\>\"", \(#\)]\)&,Length[tensor]]},TableSpacing->5];
+GmtShow[tensor_?(RankCheck[4])]:=TableForm[Map[MatrixForm,tensor,{2}],TableAlignments->Center,TableSpacing->5];
 
 
 End[];
