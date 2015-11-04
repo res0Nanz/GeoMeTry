@@ -108,10 +108,11 @@ RiemannTensor[conn_?(RankCheck[3]),coor_]/;Length[conn]==Length[coor]:=Simplify[
 RicciTensor[rt_?(RankCheck[4])]:=Simplify[Sum[rt[[i,All,i,All]],{i,Length[rt]}]];
 
 
-RicciScalar[rt_?(RankCheck[2])]:=Simplify[Tr[rt]];
+RicciScalar[g_?(RankCheck[2]),rt_?(RankCheck[2])]:=Simplify[Tr[Inverse[g].rt]];
 
 
 (* Convenient Functions *)
+GmtShow[tensor_?(ArrayDepth[#]<=2&)]:=MatrixForm[tensor];
 GmtShow[tensor_?(RankCheck[3])]:=TableForm[Map[MatrixForm,tensor],TableHeadings->{Array[
 	ToExpression[OverscriptBox["\!\(\*SubscriptBox[\(\[CapitalGamma]\), \(\[Alpha]\[Beta]\)]\)",ToString[#]]]&,Length[tensor]]},TableSpacing->5];
 GmtShow[tensor_?(RankCheck[4])]:=TableForm[Map[MatrixForm,tensor,{2}],TableAlignments->Center,TableSpacing->5];
