@@ -113,7 +113,7 @@ RicciScalar[rt_?(RankCheck[2])]:=Simplify[Tr[rt]];
 
 (* Convenient Functions *)
 GmtShow[tensor_?(RankCheck[3])]:=TableForm[Map[MatrixForm,tensor],TableHeadings->{Array[
-\!\(\*OverscriptBox[\*"\"\<\!\(\*SubscriptBox[\(\[CapitalGamma]\), \(\[Alpha]\[Beta]\)]\)\>\"", \(#\)]\)&,Length[tensor]]},TableSpacing->5];
+	ToExpression[OverscriptBox["\!\(\*SubscriptBox[\(\[CapitalGamma]\), \(\[Alpha]\[Beta]\)]\)",ToString[#]]]&,Length[tensor]]},TableSpacing->5];
 GmtShow[tensor_?(RankCheck[4])]:=TableForm[Map[MatrixForm,tensor,{2}],TableAlignments->Center,TableSpacing->5];
 
 
