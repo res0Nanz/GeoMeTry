@@ -16,11 +16,8 @@ If[Not@ValueQ[Metric::usage], Metric::usage =
 "Metric[trans, coor] gives the metric under coor coodinates."];
 
 If[Not@ValueQ[ChristoffelSymbol::usage], ChristoffelSymbol::usage =
-"ChristoffelSymbol[g, {\!\(\*SubscriptBox[\(\[Xi]\), \(1\)]\), \!\(\*SubscriptBox[\(\[Xi]\), \(2\)]\), ...}, \[Lambda], \[Mu], \[Nu]] gives Christoffel \
-Symbol \!\(\*SuperscriptBox[SubscriptBox[\(\[CapitalGamma]\), \(\[Mu]\[Nu]\)], \(\[Lambda]\)]\), under \[Xi] space with metric g."];
-
-If[Not@ValueQ[ChristoffelTable::usage], ChristoffelTable::usage =
-"ChristoffelTable[g, {\!\(\*SubscriptBox[\(x\), \(1\)]\), \!\(\*SubscriptBox[\(x\), \(2\)]\), ...}]"];
+"ChristoffelSymbol[g, {\!\(\*SubscriptBox[\(\[Xi]\), \(1\)]\), \!\(\*SubscriptBox[\(\[Xi]\), \(2\)]\), ...}] return an \
+n-by-n-by-n table whose component [[\[Lambda], \[Alpha], \[Beta]]] is the Christoffel Symbol \!\(\*SubscriptBox[SuperscriptBox[\(\[CapitalGamma]\), \(\[Lambda]\)], \(\[Alpha]\[Beta]\)]\) under \[Xi] space with metric g."];
 
 If[Not@ValueQ[RiemannTensor::usage], RiemannTensor::usage =
 "RiemannTensor[conn, coor]"];
@@ -33,6 +30,9 @@ If[Not@ValueQ[RicciScalar::usage], RicciScalar::usage =
 
 If[Not@ValueQ[GmtShow::usage], GmtShow::usage =
 "GmtShow[tensor]"];
+
+If[Not@ValueQ[GmtAll::usage], GmtAll::usage =
+"GmtAll[symbol, metric, {x1, x2, ...}]"];
 
 
 If[Not@ValueQ[BackgroundMetric::usage], BackgroundMetric::usage =
@@ -48,19 +48,13 @@ If[Not@ValueQ[MinkowskiMinus::usage], MinkowskiMinus::usage =
 "If BackgroundMetric is set to MinkowskiMinus, functions will use Minkowski \
 metric with signature (-, +, ...) as origional metric for transformations."];
 
-If[Not@ValueQ[Inverted::usage], Inverted::usage =
-"Inverted is a boolean option for transformation releted functions to know \
-which direction the transformation going. Its value represents the given \
-symbolic variables should be treated as parameters whether before the \
-transformation or not."];
-
 GeoMeTry::opts = "`1`";
 
 
 Begin["`Private`"];
 
 
-Options[GmtTransformOptions]={BackgroundMetric->Euclidean,Inverted->False};
+Options[GmtTransformOptions]={BackgroundMetric->Euclidean};
 
 
 GmtMetricTypes={Euclidean,MinkowskiPlus,MinkowskiMinus};
@@ -84,19 +78,19 @@ MinkowskiMetric[n_,sig_:-1] :=
 
 Metric[trans_,coor_,OptionsPattern[GmtTransformOptions]]:=Simplify[Check[
 	Transpose[#].GmtGetMetric[Length[coor],OptionValue[BackgroundMetric]].
-	#&[If[OptionValue[Inverted],Inverse,#&][JacobiMatrix[trans,coor]]],
-	Abort[]]];
+	#&[JacobiMatrix[trans,coor]],Abort[]]];
 
 
-ChristoffelSymbol[g_,x_List,u_Integer,m_Integer,n_Integer]/;
+ChristoffelSingle[g_,x_List,u_Integer,m_Integer,n_Integer]/;
 	MatrixQ[g]&&Dimensions[g]==Function[a,{a,a}][Dimensions[x][[1]]]:=
 		Simplify[1/2 Inverse[g][[u]].(D[g[[m]],x[[n]]]+D[g[[n]],x[[m]]]-Grad[g[[m,n]],x])];
-ChristoffelSymbol[trans_,coor_,u_,m_,n_,OptionsPattern[GmtTransformOptions]]/;AllTrue[VectorQ,{trans,coor}]&&Length[trans]==Length[coor]:=
-	ChristoffelSymbol[Metric[trans,coor],coor,u,m,n];
+ChristoffelSingle[trans_,coor_,u_,m_,n_,OptionsPattern[GmtTransformOptions]]/;
+	AllTrue[VectorQ,{trans,coor}]&&Length[trans]==Length[coor]:=
+	ChristoffelSingle[Metric[trans,coor,BackgroundMetric->OptionValue[BackgroundMetric]],coor,u,m,n];
 
 
-ChristoffelTable[trans_,coor_,opts__:{}]:=Simplify[
-	Table[ChristoffelSymbol@@{trans,coor,u,m,n}~Join~Flatten[{opts}],{u,Length[coor]},{m,Length[coor]},{n,Length[coor]}]];
+ChristoffelSymbol[trans_,coor_,opts__:{}]:=Simplify[
+	Table[ChristoffelSingle@@{trans,coor,u,m,n}~Join~Flatten[{opts}],{u,Length[coor]},{m,Length[coor]},{n,Length[coor]}]];
 
 
 RiemannTensor[conn_?(RankCheck[3]),coor_]/;Length[conn]==Length[coor]:=Simplify[Table[
@@ -116,6 +110,20 @@ GmtShow[tensor_?(ArrayDepth[#]<=2&)]:=MatrixForm[tensor];
 GmtShow[tensor_?(RankCheck[3])]:=TableForm[Map[MatrixForm,tensor],TableHeadings->{Array[
 	ToExpression[OverscriptBox["\!\(\*SubscriptBox[\(\[CapitalGamma]\), \(\[Alpha]\[Beta]\)]\)",ToString[#]]]&,Length[tensor]]},TableSpacing->5];
 GmtShow[tensor_?(RankCheck[4])]:=TableForm[Map[MatrixForm,tensor,{2}],TableAlignments->Center,TableSpacing->5];
+
+
+GmtGiveSymbol[s__]:=With[{str=StringJoin@@(ToString/@{s})},Clear[str];Print["** Declearing: ",str];Symbol[str]];
+GmtAll[manifold_Symbol,g_?(RankCheck[2]),x_?VectorQ]:=With[{
+	conn=GmtGiveSymbol[manifold,"Christoffel"],
+	rie=GmtGiveSymbol[manifold,"RiemannTensor"],
+	ric=GmtGiveSymbol[manifold,"RicciTensor"],
+	r=GmtGiveSymbol[manifold,"RicciScalar"]},
+
+	conn=ChristoffelSymbol[g,x];
+	rie=RiemannTensor[conn,x];
+	ric=TensorContract[rie,{{1,3}}];
+	r=Tr[Inverse[g].ric];
+];
 
 
 End[];
