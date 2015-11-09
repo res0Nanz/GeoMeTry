@@ -26,7 +26,11 @@ If[Not@ValueQ[RicciTensor::usage], RicciTensor::usage =
 "RicciTensor[riemann_tensor]"];
 
 If[Not@ValueQ[RicciScalar::usage], RicciScalar::usage =
-"RicciScalar[ricci_tensor]"];
+"RicciScalar[metric, ricci_tensor]"];
+
+If[Not@ValueQ[EinsteinTensor::usage], EinsteinTensor::usage =
+"EinsteinTensor[metric, ricci_tensor]"];
+
 
 If[Not@ValueQ[GmtShow::usage], GmtShow::usage =
 "GmtShow[tensor]"];
@@ -35,17 +39,17 @@ If[Not@ValueQ[GmtAll::usage], GmtAll::usage =
 "GmtAll[symbol, metric, {x1, x2, ...}]"];
 
 
-If[Not@ValueQ[BackgroundMetric::usage], BackgroundMetric::usage =
-"BackgroundMetric is an option for metric related functions to configure \
+If[Not@ValueQ[InducedFrom::usage], InducedFrom::usage =
+"InducedFrom is an option for metric related functions to configure \
 the origional metric of transformations. The default value is Euclidean."];
 If[Not@ValueQ[Euclidean::usage], Euclidean::usage =
-"If BackgroundMetric is set to Euclidean, functions will use identity \
+"If InducedFrom is set to Euclidean, functions will use identity \
 matrix as origional metric for transformations."];
 If[Not@ValueQ[MinkowskiPlus::usage], MinkowskiPlus::usage =
-"If BackgroundMetric is set to MinkowskiPlus, functions will use Minkowski \
+"If InducedFrom is set to MinkowskiPlus, functions will use Minkowski \
 metric with signature (+, -, ...) as origional metric for transformations."];
 If[Not@ValueQ[MinkowskiMinus::usage], MinkowskiMinus::usage =
-"If BackgroundMetric is set to MinkowskiMinus, functions will use Minkowski \
+"If InducedFrom is set to MinkowskiMinus, functions will use Minkowski \
 metric with signature (-, +, ...) as origional metric for transformations."];
 
 GeoMeTry::opts = "`1`";
@@ -54,7 +58,7 @@ GeoMeTry::opts = "`1`";
 Begin["`Private`"];
 
 
-Options[GmtTransformOptions]={BackgroundMetric->Euclidean};
+Options[GmtTransformOptions]={InducedFrom->Euclidean};
 
 
 GmtMetricTypes={Euclidean,MinkowskiPlus,MinkowskiMinus};
@@ -77,7 +81,7 @@ MinkowskiMetric[n_,sig_:-1] :=
 
 
 Metric[trans_,coor_,OptionsPattern[GmtTransformOptions]]:=Simplify[Check[
-	Transpose[#].GmtGetMetric[Length[coor],OptionValue[BackgroundMetric]].
+	Transpose[#].GmtGetMetric[Length[trans],OptionValue[InducedFrom]].
 	#&[JacobiMatrix[trans,coor]],Abort[]]];
 
 
@@ -86,7 +90,7 @@ ChristoffelSingle[g_,x_List,u_Integer,m_Integer,n_Integer]/;
 		Simplify[1/2 Inverse[g][[u]].(D[g[[m]],x[[n]]]+D[g[[n]],x[[m]]]-Grad[g[[m,n]],x])];
 ChristoffelSingle[trans_,coor_,u_,m_,n_,OptionsPattern[GmtTransformOptions]]/;
 	AllTrue[VectorQ,{trans,coor}]&&Length[trans]==Length[coor]:=
-	ChristoffelSingle[Metric[trans,coor,BackgroundMetric->OptionValue[BackgroundMetric]],coor,u,m,n];
+	ChristoffelSingle[Metric[trans,coor,InducedFrom->OptionValue[InducedFrom]],coor,u,m,n];
 
 
 ChristoffelSymbol[trans_,coor_,opts__:{}]:=Simplify[
@@ -105,6 +109,9 @@ RicciTensor[rt_?(RankCheck[4])]:=Simplify[Sum[rt[[i,All,i,All]],{i,Length[rt]}]]
 RicciScalar[g_?(RankCheck[2]),rt_?(RankCheck[2])]:=Simplify[Tr[Inverse[g].rt]];
 
 
+EinsteinTensor[g_?(RankCheck[2]),rt_?(RankCheck[2])]:=Simplify[rt-RicciScalar[g,rt]g/2];
+
+
 (* Convenient Functions *)
 GmtShow[tensor_?(ArrayDepth[#]<=2&)]:=MatrixForm[tensor];
 GmtShow[tensor_?(RankCheck[3])]:=TableForm[Map[MatrixForm,tensor],TableHeadings->{Array[
@@ -113,16 +120,16 @@ GmtShow[tensor_?(RankCheck[4])]:=TableForm[Map[MatrixForm,tensor,{2}],TableAlign
 
 
 GmtGiveSymbol[s__]:=With[{str=StringJoin@@(ToString/@{s})},Clear[str];Print["** Declearing: ",str];Symbol[str]];
-GmtAll[manifold_Symbol,g_?(RankCheck[2]),x_?VectorQ]:=With[{
-	conn=GmtGiveSymbol[manifold,"Christoffel"],
-	rie=GmtGiveSymbol[manifold,"RiemannTensor"],
-	ric=GmtGiveSymbol[manifold,"RicciTensor"],
-	r=GmtGiveSymbol[manifold,"RicciScalar"]},
+GmtAll[name_Symbol,g_?(RankCheck[2]),x_?VectorQ]:=With[{
+	conn=GmtGiveSymbol[name,"Christoffel"],
+	rie=GmtGiveSymbol[name,"RiemannTensor"],
+	ric=GmtGiveSymbol[name,"RicciTensor"],
+	r=GmtGiveSymbol[name,"RicciScalar"]},
 
 	conn=ChristoffelSymbol[g,x];
 	rie=RiemannTensor[conn,x];
-	ric=TensorContract[rie,{{1,3}}];
-	r=Tr[Inverse[g].ric];
+	ric=RicciTensor[rie];
+	r=RicciScalar[g,ric];
 ];
 
 
