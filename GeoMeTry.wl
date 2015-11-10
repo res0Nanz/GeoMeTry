@@ -120,7 +120,8 @@ GmtShow[tensor_?(RankCheck[4])]:=TableForm[Map[MatrixForm,tensor,{2}],TableAlign
 
 
 GmtGiveSymbol[s__]:=With[{str=StringJoin@@(ToString/@{s})},Clear[str];Print["** Declearing: ",str];Symbol[str]];
-GmtAll[name_Symbol,g_?(RankCheck[2]),x_?VectorQ]:=With[{
+GmtAll[name_Symbol,g_,x_]:=GmtAll[SymbolName[name],g,x];
+GmtAll[name_String,g_?(RankCheck[2]),x_?VectorQ]:=With[{
 	conn=GmtGiveSymbol[name,"Christoffel"],
 	rie=GmtGiveSymbol[name,"RiemannTensor"],
 	ric=GmtGiveSymbol[name,"RicciTensor"],
